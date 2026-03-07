@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  name               String?
+  email              String              @unique
+  emailVerified      DateTime?
+  image              String?
+  hashedPassword     String?
+  monthlyGoal        Float               @default(2000)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  referredByCode     String?
+  accounts           Account[]
+  affiliate          Affiliate?
+  categories         Category[]
+  fixedSubscriptions FixedSubscription[]
+  loginHistory       LoginHistory[]
+  sessions           Session[]
+  subscription       Subscription?
+  transactions       Transaction[]
+  twoFactor          TwoFactorAuth?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  stripeCustomerId     String    @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  status               String    @default("inactive")
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TwoFactorAuth {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  secret      String
+  isEnabled   Boolean  @default(false)
+  backupCodes String   @default("[]")
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  amount      Float
+  description String
+  category    String
+  type        String
+  date        DateTime
+  recurring   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+  color  String @default("#94a3b8")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FixedSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  platform  String
+  price     Float
+  startDate DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Affiliate {
+  id            String     @id @default(cuid())
+  userId        String     @unique
+  referralCode  String     @unique
+  totalEarnings Float      @default(0)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referrals     Referral[]
+}
+
+model Referral {
+  id             String    @id @default(cuid())
+  affiliateId    String
+  referredUserId String
+  referredEmail  String
+  status         String    @default("active")
+  monthlyPayout  Float     @default(2.99)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  affiliate      Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+}
